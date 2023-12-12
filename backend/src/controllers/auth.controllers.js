@@ -2,6 +2,7 @@ import { validationResult } from "express-validator";
 import User from "../models/User.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import transporter from "../utils/SendEmail.js";
 
 
 
@@ -166,4 +167,162 @@ export const changePassword = async (req, res) => {
     } catch (error) {
         res.status(400).send(error)
     }
+}
+
+export const sendEmail = async (req, res) => {
+
+    try {
+        const errors = validationResult(req);
+
+        if (!errors.isEmpty()) {
+            throw new ApiError(400, "Missing Fields", errors.array())
+
+        }
+        const { email } = req.body;
+
+        const existedUser = await User.findOne({ email });
+
+        if (!existedUser) {
+            throw new ApiError(400, "User Doesn't Exist");
+        }
+
+        const new_secret = existedUser._id + process.env.ACCESS_TOKEN_SECRET;
+
+        const token = await existedUser.generateResetToken(new_secret);
+
+        const link = `${process.env.RESET_EMAIL_LINK}/${existedUser._id}/${token}`
+
+        if (link) {
+            const info =await  transporter.sendMail({
+
+                from: {
+                    name: "Jeevan Neupane",
+                    address: process.env.EMAIL_FROM
+                },
+                to: existedUser.email,
+                subject: 'Test Email',
+                text: 'Hello, this is a test email!',
+                html: ` <!DOCTYPE html>
+                <html lang="en">
+                
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Password Change</title>
+                    <style>
+                        body {
+                            font-family: 'Arial', sans-serif;
+                            background-color: #f4f4f4;
+                            margin: 0;
+                            padding: 0;
+                        }
+                
+                        .container {
+                            max-width: 600px;
+                            margin: 0 auto;
+                            padding: 20px;
+                            background-color: #fff;
+                            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+                            margin-top: 20px;
+                        }
+                
+                        h2 {
+                            color: #333;
+                        }
+                
+                        p {
+                            color: #555;
+                        }
+                
+                        .btn {
+                            display: inline-block;
+                            padding: 10px 20px;
+                            background-color: #007BFF;
+                            color: #ffffff;
+                            text-decoration: none;
+                            border-radius: 5px;
+                        }
+                    </style>
+                </head>
+                
+                <body>
+                    <div class="container">
+                        <h2>Password Change Request</h2>
+                        <p>You have requested to change your password. Click the button below to proceed with the password change:</p>
+                        <a href=${link} class="btn">Reset Password</a>
+                        <p>If you didn't request this change, please ignore this email.</p>
+                        <p>Thank you!</p>
+                    </div>
+                </body>
+                
+                </html>
+                `
+
+            });
+            res.send("Email is sent");
+        } else {
+            throw new ApiError(500, "Internal Server Error");
+
+        }
+
+
+
+
+
+
+    } catch (error) {
+        res.status(400).send(error);
+    }
+
+}
+
+
+export const userPasswordReset = async (req, res) => {
+
+    try {
+        const errors = validationResult(req);
+
+        if (!errors.isEmpty()) {
+            throw new ApiError(400, "Missing Fields", errors.array())
+
+        }
+        const { password } = req.body;
+        const { id, token } = req.params;
+
+        const existedUser = await User.findById(id);
+
+        const new_token = existedUser._id + process.env.ACCESS_TOKEN_SECRET;
+        let verify;
+        try {
+            verify = await existedUser.verifyResetToken(new_token, token);
+        } catch (error) {
+            throw new ApiError(500, error.message);
+        }
+
+        if (verify) {
+            existedUser.password = password;
+            const changedUser = await existedUser.save();
+             
+            if (changedUser) {
+                res.status(200).json(
+                    new ApiResponse(200, changedUser, "Password is changed successfully")
+                )
+            }
+        } else {
+            throw new ApiError(500, "Unable to change the password ");
+        }
+
+
+
+
+
+
+
+
+
+
+    } catch (error) {
+        res.status(400).send(error);
+    }
+
 }

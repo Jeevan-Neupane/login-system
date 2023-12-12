@@ -67,6 +67,27 @@ userSchema.methods.generateAccessToken = async function () {
 
 }
 
+userSchema.methods.generateResetToken = async function (new_secret) {
+
+    const payload = {
+        _id: this._id
+    }
+
+    return jwt.sign(payload, new_secret, {
+        expiresIn: '15m'
+    })
+
+
+}
+userSchema.methods.verifyResetToken = async function(new_secret, old_token) {
+
+
+
+    return jwt.verify(old_token, new_secret);
+
+
+}
+
 const User = mongoose.model("User", userSchema);
 
 
