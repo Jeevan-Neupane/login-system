@@ -9,7 +9,7 @@ app.use(cors({
     origin: process.env.CORS,
     credentials: true
 }))
-
+app.use(express.static("public"))
 
 app.use("/api/", userroute);
 

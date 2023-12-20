@@ -79,7 +79,7 @@ userSchema.methods.generateResetToken = async function (new_secret) {
 
 
 }
-userSchema.methods.verifyResetToken = async function(new_secret, old_token) {
+userSchema.methods.verifyResetToken = async function (new_secret, old_token) {
 
 
 

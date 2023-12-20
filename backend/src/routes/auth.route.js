@@ -3,6 +3,7 @@ import { changePassword, getUser, loginUser, register, sendEmail, userPasswordRe
 import { check } from "express-validator";
 import authUser from "../middleware/auth.middleware.js";
 
+
 const route = Router();
 
 

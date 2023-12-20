@@ -12,7 +12,7 @@ export const register = async (req, res) => {
 
 
     try {
-
+     
         const errors = validationResult(req);
 
         if (!errors.isEmpty()) {
@@ -21,6 +21,8 @@ export const register = async (req, res) => {
         const { name, username, email, password, terms } = req.body;
 
         //*Check if the email already exist in the database
+       
+
 
         const existed = await User.findOne({
             $or: [{ username }, { email }]
@@ -29,7 +31,6 @@ export const register = async (req, res) => {
             throw new ApiError(409, "User with email or username already exist");
 
         }
-
 
         //*Create a new user
         const user = await User.create({
@@ -58,7 +59,7 @@ export const register = async (req, res) => {
 
     } catch (error) {
 
-        res.send(error);
+        res.status(400).send(error);
     }
 
 }
@@ -78,9 +79,10 @@ export const loginUser = async (req, res) => {
 
         const user1 = await User.findOne({ email });
         const user2 = await User.findOne({ username });
-        if ((user1?._id.toString() != user2?._id.toString())) {
+        if (!user1 || !user2) {
             throw new ApiError(404, "User doesn't exist")
         }
+
 
         const matchPassword = await user1.isPasswordCorrect(password);
 
@@ -122,7 +124,7 @@ export const getUser = async (req, res) => {
             throw new ApiError(500, "Error while fetching user");
         }
     } catch (error) {
-        res.status(400).send(error)
+        res.status(404).send(error)
     }
 }
 
@@ -151,7 +153,7 @@ export const changePassword = async (req, res) => {
             const changedUser = await user.save();
             if (changedUser) {
                 res.status(200).json(
-                    new ApiResponse(200, changedUser, "Logged in successfull")
+                    new ApiResponse(200, changedUser, "Password Changed Successfully")
                 )
             }
         } else {
@@ -193,7 +195,7 @@ export const sendEmail = async (req, res) => {
         const link = `${process.env.RESET_EMAIL_LINK}/${existedUser._id}/${token}`
 
         if (link) {
-            const info =await  transporter.sendMail({
+            const info = await transporter.sendMail({
 
                 from: {
                     name: "Jeevan Neupane",
@@ -259,7 +261,9 @@ export const sendEmail = async (req, res) => {
                 `
 
             });
-            res.send("Email is sent");
+            res.status(200).json(
+                new ApiResponse(200, null, "Email Sent Successfully")
+            )
         } else {
             throw new ApiError(500, "Internal Server Error");
 
@@ -302,7 +306,7 @@ export const userPasswordReset = async (req, res) => {
         if (verify) {
             existedUser.password = password;
             const changedUser = await existedUser.save();
-             
+
             if (changedUser) {
                 res.status(200).json(
                     new ApiResponse(200, changedUser, "Password is changed successfully")

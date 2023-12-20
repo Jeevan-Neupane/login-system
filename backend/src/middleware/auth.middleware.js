@@ -12,7 +12,7 @@ const authUser = async (req, res, next) => {
         }
 
         const user = jwt.decode(token, process.env.ACCESS_TOKEN_SECRET);
-        console.log(user._id);
+       
         if (user) {
             req.uId = user._id;
             next();
